@@ -35,14 +35,10 @@ export class AdminEventsController {
     return { event: toAdminEvent(event) };
   }
 
-  @Patch(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() dto: UpdateEventDto,
-    @CurrentUser() user: SafeUser,
-  ) {
-    const event = await this.eventsService.update(id, dto, user.id);
-    return { event: toAdminEvent(event) };
+  @Get()
+  async list() {
+    const events = await this.eventsService.listAdmin();
+    return { events: events.map((event) => toAdminEvent(event)) };
   }
 
   @Get(':id/inventory')
@@ -62,6 +58,22 @@ export class AdminEventsController {
       dto.status,
       user.id,
     );
+    return { event: toAdminEvent(event) };
+  }
+
+  @Get(':id')
+  async getOne(@Param('id') id: string) {
+    const event = await this.eventsService.findByIdOrFail(id);
+    return { event: toAdminEvent(event) };
+  }
+
+  @Patch(':id')
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateEventDto,
+    @CurrentUser() user: SafeUser,
+  ) {
+    const event = await this.eventsService.update(id, dto, user.id);
     return { event: toAdminEvent(event) };
   }
 }

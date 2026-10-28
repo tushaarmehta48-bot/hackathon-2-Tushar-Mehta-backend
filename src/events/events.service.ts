@@ -198,4 +198,8 @@ export class EventsService {
     }
     return event;
   }
+
+  async listAdmin() {
+    return this.eventModel.find().sort({ startAt: -1 }).exec();
+  }
 }

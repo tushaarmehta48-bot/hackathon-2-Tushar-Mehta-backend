@@ -123,4 +123,22 @@ describe('Events (e2e)', () => {
       .send({ status: 'published' })
       .expect(400);
   });
+
+  it('lists and fetches admin events including drafts', async () => {
+    const admin = await loginAsAdmin(app);
+    const createRes = await admin
+      .post('/api/v1/admin/events')
+      .send(sampleEvent)
+      .expect(201);
+    const eventId = createRes.body.event.id as string;
+
+    const listRes = await admin.get('/api/v1/admin/events').expect(200);
+    expect(listRes.body.events.some((e: { id: string }) => e.id === eventId)).toBe(
+      true,
+    );
+
+    const getRes = await admin.get(`/api/v1/admin/events/${eventId}`).expect(200);
+    expect(getRes.body.event.status).toBe('draft');
+    expect(getRes.body.event.title).toBe(sampleEvent.title);
+  });
 });
