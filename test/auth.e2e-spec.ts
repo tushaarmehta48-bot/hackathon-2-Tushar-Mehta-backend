@@ -9,7 +9,11 @@ import type { AppModule as AppModuleType } from '../src/app.module.js';
 import { UserRole } from '../src/users/enums/user-role.enum.js';
 import { UserStatus } from '../src/users/enums/user-status.enum.js';
 import { User, UserDocument } from '../src/users/schemas/user.schema.js';
-import { closeTestApp, createTestApp } from './helpers/create-test-app.js';
+import {
+  closeTestApp,
+  createTestApp,
+  resetDatabase,
+} from './helpers/create-test-app.js';
 
 describe('Auth (e2e)', () => {
   let app: INestApplication<App>;
@@ -22,13 +26,12 @@ describe('Auth (e2e)', () => {
 
   beforeEach(async () => {
     app = await createTestApp(AppModule);
-    const connection = app.get<Connection>(getConnectionToken());
-    await connection.dropDatabase();
     userModel = app.get(getModelToken(User.name));
   });
 
   afterEach(async () => {
     if (app) {
+      await resetDatabase(app);
       await closeTestApp(app);
     }
   });

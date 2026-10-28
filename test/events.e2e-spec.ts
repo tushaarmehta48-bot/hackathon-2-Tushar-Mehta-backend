@@ -9,7 +9,11 @@ import { User, UserDocument } from '../src/users/schemas/user.schema.js';
 import { createAdminUser, loginAsAdmin } from './helpers/auth-agent.js';
 import { getConnectionToken } from '@nestjs/mongoose';
 import type { Connection } from 'mongoose';
-import { closeTestApp, createTestApp } from './helpers/create-test-app.js';
+import {
+  closeTestApp,
+  createTestApp,
+  resetDatabase,
+} from './helpers/create-test-app.js';
 
 const sampleEvent = {
   title: 'Campus Tech Meetup',
@@ -37,8 +41,6 @@ describe('Events (e2e)', () => {
 
   beforeEach(async () => {
     app = await createTestApp(AppModule);
-    const connection = app.get<Connection>(getConnectionToken());
-    await connection.dropDatabase();
     userModel = app.get(getModelToken(User.name));
     auditModel = app.get(getModelToken(AuditLog.name));
     await createAdminUser(userModel);
@@ -46,6 +48,7 @@ describe('Events (e2e)', () => {
 
   afterEach(async () => {
     if (app) {
+      await resetDatabase(app);
       await closeTestApp(app);
     }
   });

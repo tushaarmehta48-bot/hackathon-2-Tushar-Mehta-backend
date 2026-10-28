@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   Param,
   Patch,
   Post,
@@ -17,12 +18,16 @@ import { UpdateEventDto } from './dto/update-event.dto.js';
 import { UpdateEventStatusDto } from './dto/update-event-status.dto.js';
 import { toAdminEvent } from './events.mapper.js';
 import { EventsService } from './events.service.js';
+import { TicketPackagesService } from './ticket-packages.service.js';
 
 @Controller('admin/events')
 @UseGuards(SessionAuthGuard, RolesGuard)
 @Roles(UserRole.Admin)
 export class AdminEventsController {
-  constructor(private readonly eventsService: EventsService) {}
+  constructor(
+    private readonly eventsService: EventsService,
+    private readonly packagesService: TicketPackagesService,
+  ) {}
 
   @Post()
   async create(@Body() dto: CreateEventDto, @CurrentUser() user: SafeUser) {
@@ -38,6 +43,12 @@ export class AdminEventsController {
   ) {
     const event = await this.eventsService.update(id, dto, user.id);
     return { event: toAdminEvent(event) };
+  }
+
+  @Get(':id/inventory')
+  async inventory(@Param('id') id: string) {
+    const availability = await this.packagesService.getAdminInventory(id);
+    return { availability };
   }
 
   @Patch(':id/status')

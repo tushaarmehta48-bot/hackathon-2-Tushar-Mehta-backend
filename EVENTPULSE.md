@@ -21,7 +21,7 @@ NestJS REST API for EventPulse. See repo root `IMPLEMENTATION_PLAN.md` for phase
 - Rate limit: auth routes throttled (20 req / minute)
 - Bootstrap admin: set `BOOTSTRAP_ADMIN_EMAIL` + `BOOTSTRAP_ADMIN_PASSWORD` on first boot
 
-## Phase B2 — Events & packages (current)
+## Phase B2 — Events & packages
 
 **Public**
 
@@ -37,6 +37,20 @@ NestJS REST API for EventPulse. See repo root `IMPLEMENTATION_PLAN.md` for phase
 - `PATCH /api/v1/admin/packages/:packageId`
 
 Admin mutations write to `auditLogs`.
+
+## Phase B3 — Inventory & availability
+
+- `GET /api/v1/events/:id/ticket-packages` — active packages with `quantityRemaining`, `onSale`
+- `GET /api/v1/events/:id/availability` — event + package aggregates; syncs `sold_out` when inventory is exhausted
+- `GET /api/v1/admin/events/:id/inventory` — admin view (includes inactive packages)
+
+## Phase B4 — Bookings & tickets (current)
+
+- `POST /api/v1/bookings/quote` — live price/inventory validation (auth required)
+- `POST /api/v1/bookings` — atomic booking + ticket/QR issuance (MongoDB transaction)
+- `GET /api/v1/bookings/me`, `GET /api/v1/bookings/:id`, `GET /api/v1/bookings/:id/tickets`
+- `POST /api/v1/bookings/:id/cancel` — restores inventory when allowed
+- Enforces event-level and package-level purchase limits
 
 ## Local development
 

@@ -13,6 +13,20 @@ import {
   TicketPackage,
   TicketPackageDocument,
 } from './schemas/ticket-package.schema.js';
+import {
+  EventStatus,
+  type EventStatus as EventStatusType,
+} from './enums/event-status.enum.js';
+import {
+  buildEventAvailability,
+  buildPackageAvailability,
+} from './inventory/inventory.calculator.js';
+
+const PUBLIC_EVENT_STATUSES: EventStatus[] = [
+  EventStatus.Published,
+  EventStatus.SoldOut,
+  EventStatus.Completed,
+];
 
 @Injectable()
 export class TicketPackagesService {
@@ -79,6 +93,8 @@ export class TicketPackagesService {
       metadata: { eventId },
     });
 
+    await this.refreshEventSoldOutStatus(event._id);
+
     return pkg;
   }
 
@@ -126,12 +142,129 @@ export class TicketPackagesService {
       metadata: { eventId: pkg.eventId.toString() },
     });
 
+    await this.refreshEventSoldOutStatus(pkg.eventId);
+
     return pkg;
+  }
+
+  private assertPublicEventStatus(status: EventStatusType) {
+    if (!PUBLIC_EVENT_STATUSES.includes(status)) {
+      throw new NotFoundException('Event not found');
+    }
   }
 
   async countActiveByEvent(eventId: Types.ObjectId) {
     return this.packageModel
       .countDocuments({ eventId, active: true })
       .exec();
+  }
+
+  async listByEvent(eventId: Types.ObjectId) {
+    return this.packageModel.find({ eventId }).sort({ createdAt: 1 }).exec();
+  }
+
+  async getPublicPackagesForEvent(eventId: string) {
+    const event = await this.findPublicEventOrFail(eventId);
+    const packages = await this.listByEvent(event._id);
+    const active = packages.filter((pkg) => pkg.active);
+
+    return {
+      eventId: event._id.toString(),
+      packages: active.map((pkg) => buildPackageAvailability(pkg)),
+    };
+  }
+
+  async getAvailabilityForPublicEvent(eventId: string) {
+    const event = await this.findPublicEventOrFail(eventId);
+    const packages = await this.listByEvent(event._id);
+    const availability = buildEventAvailability({
+      eventId: event._id.toString(),
+      eventStatus: event.status,
+      eventCapacity: event.capacity,
+      packages,
+    });
+
+    await this.syncEventSoldOutFromAvailability(event._id, availability.summary.isSoldOut);
+
+    return availability;
+  }
+
+  private async findPublicEventOrFail(eventId: string) {
+    if (!Types.ObjectId.isValid(eventId)) {
+      throw new NotFoundException('Event not found');
+    }
+
+    const event = await this.eventModel.findById(eventId).exec();
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+
+    this.assertPublicEventStatus(event.status);
+    return event;
+  }
+
+  async getAdminInventory(eventId: string) {
+    if (!Types.ObjectId.isValid(eventId)) {
+      throw new NotFoundException('Event not found');
+    }
+
+    const event = await this.eventModel.findById(eventId).exec();
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+
+    const packages = await this.listByEvent(event._id);
+    return buildEventAvailability({
+      eventId: event._id.toString(),
+      eventStatus: event.status,
+      eventCapacity: event.capacity,
+      packages,
+    });
+  }
+
+  async syncEventSoldOutFromAvailability(
+    eventId: Types.ObjectId,
+    isSoldOut: boolean,
+  ) {
+    const event = await this.eventModel.findById(eventId).exec();
+    if (!event) {
+      return;
+    }
+
+    if (
+      event.status === EventStatus.Published &&
+      isSoldOut
+    ) {
+      event.status = EventStatus.SoldOut;
+      await event.save();
+      return;
+    }
+
+    if (
+      event.status === EventStatus.SoldOut &&
+      !isSoldOut
+    ) {
+      event.status = EventStatus.Published;
+      await event.save();
+    }
+  }
+
+  /** Used by booking flow (B4) after inventory changes. */
+  async refreshEventSoldOutStatus(eventId: Types.ObjectId) {
+    const event = await this.eventModel.findById(eventId).exec();
+    if (!event) {
+      return;
+    }
+    const packages = await this.listByEvent(eventId);
+    const availability = buildEventAvailability({
+      eventId: eventId.toString(),
+      eventStatus: event.status,
+      eventCapacity: event.capacity,
+      packages,
+    });
+    await this.syncEventSoldOutFromAvailability(
+      eventId,
+      availability.summary.isSoldOut,
+    );
   }
 }

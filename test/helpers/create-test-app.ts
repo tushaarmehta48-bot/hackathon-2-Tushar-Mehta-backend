@@ -27,7 +27,10 @@ export async function createTestApp(AppModule: typeof AppModuleType) {
 }
 
 export async function closeTestApp(app: INestApplication) {
-  const connection = app.get<Connection>(getConnectionToken());
-  await connection.close();
   await app.close();
+}
+
+export async function resetDatabase(app: INestApplication) {
+  const connection = app.get<Connection>(getConnectionToken());
+  await connection.dropDatabase();
 }

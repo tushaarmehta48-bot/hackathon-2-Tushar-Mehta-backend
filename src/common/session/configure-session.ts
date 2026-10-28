@@ -13,16 +13,21 @@ export function configureSession(app: INestApplication) {
     throw new Error('SESSION_SECRET is required');
   }
 
+  const store =
+    nodeEnv === 'test'
+      ? new session.MemoryStore()
+      : MongoStore.create({
+          mongoUrl: mongoUri,
+          collectionName: 'sessions',
+        });
+
   app.use(
     session({
       name: 'eventpulse.sid',
       secret,
       resave: false,
       saveUninitialized: false,
-      store: MongoStore.create({
-        mongoUrl: mongoUri,
-        collectionName: 'sessions',
-      }),
+      store,
       cookie: {
         httpOnly: true,
         secure: nodeEnv === 'production',
