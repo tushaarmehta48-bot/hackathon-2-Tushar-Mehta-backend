@@ -38,6 +38,12 @@ export class Ticket {
 
   @Prop()
   checkedInAt?: Date;
+
+  @Prop({ type: Types.ObjectId, ref: 'User' })
+  checkedInBy?: Types.ObjectId;
+
+  @Prop({ trim: true, maxlength: 64 })
+  gateId?: string;
 }
 
 export const TicketSchema = SchemaFactory.createForClass(Ticket);

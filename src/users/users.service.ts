@@ -46,6 +46,21 @@ export class UsersService {
     return user.save();
   }
 
+  async createGatekeeper(name: string, email: string, passwordHash: string) {
+    const user = new this.userModel({
+      name,
+      email,
+      passwordHash,
+      role: UserRole.Gatekeeper,
+      status: UserStatus.Active,
+    });
+    return user.save();
+  }
+
+  listByRole(role: UserRole) {
+    return this.userModel.find({ role, status: UserStatus.Active }).exec();
+  }
+
   async createAdminIfMissing(name: string, email: string, passwordHash: string) {
     const existing = await this.findByEmail(email);
     if (existing) {

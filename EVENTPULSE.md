@@ -44,13 +44,48 @@ Admin mutations write to `auditLogs`.
 - `GET /api/v1/events/:id/availability` — event + package aggregates; syncs `sold_out` when inventory is exhausted
 - `GET /api/v1/admin/events/:id/inventory` — admin view (includes inactive packages)
 
-## Phase B4 — Bookings & tickets (current)
+## Phase B4 — Bookings & tickets
 
 - `POST /api/v1/bookings/quote` — live price/inventory validation (auth required)
 - `POST /api/v1/bookings` — atomic booking + ticket/QR issuance (MongoDB transaction)
 - `GET /api/v1/bookings/me`, `GET /api/v1/bookings/:id`, `GET /api/v1/bookings/:id/tickets`
 - `POST /api/v1/bookings/:id/cancel` — restores inventory when allowed
 - Enforces event-level and package-level purchase limits
+
+## Phase B5 — Gatekeeper check-in
+
+**Admin**
+
+- `GET /api/v1/admin/gatekeepers`
+- `POST /api/v1/admin/gatekeepers`
+- `POST /api/v1/admin/gatekeepers/:id/assignments`
+
+**Gatekeeper** (session + `gatekeeper` role)
+
+- `GET /api/v1/gatekeeper/assignments`
+- `POST /api/v1/gatekeeper/check-in` — body: `{ qrToken, gateId? }`  
+  Results: `success`, `already_used`, `invalid`, `cancelled`, `wrong_event`, `unauthorised`
+
+## Phase B6 — Admin analytics
+
+- `GET /api/v1/admin/analytics?eventId=` — per-event or all events: sold, remaining, admissions checked-in, check-in rate, revenue
+- `GET /api/v1/admin/check-ins` — filters: `eventId`, `gatekeeperId`, `gateId`, `packageId`, `result`, `from`, `to` (no attendee PII)
+
+## Phase B7 — Feedback & audit
+
+- `POST /api/v1/events/:eventId/feedback` — confirmed booking, after event end; one per booking
+- `GET /api/v1/admin/feedback` — filter by `eventId`, `moderationStatus`
+- `PATCH /api/v1/admin/feedback/:id/moderation` — `visible` / `hidden`
+- `GET /api/v1/admin/audit-logs` — filter by `actorId`, `targetType`, `targetId`, `from`, `to`
+
+## Phase B8 — Assistant, realtime, OpenAPI (complete)
+
+- `POST /api/v1/assistant/turn` — state machine orchestration; see `backend/docs/ASSISTANT_TEMPLATES.md`
+- Socket.IO namespace `/realtime` — cookie session auth; `join` → `admin` or `event:{eventId}`
+- Events: `check-in:update`, `inventory:update`
+- Swagger UI: `http://localhost:3000/api/docs`
+
+**Backend sign-off:** Phases B0–B8 complete — frontend may start (see root `IMPLEMENTATION_PLAN.md`).
 
 ## Local development
 

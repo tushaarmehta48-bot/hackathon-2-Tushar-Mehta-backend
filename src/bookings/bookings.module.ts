@@ -6,6 +6,7 @@ import {
   TicketPackage,
   TicketPackageSchema,
 } from '../events/schemas/ticket-package.schema.js';
+import { RealtimeModule } from '../realtime/realtime.module.js';
 import { UsersModule } from '../users/users.module.js';
 import { BookingsController } from './bookings.controller.js';
 import { BookingsService } from './bookings.service.js';
@@ -22,6 +23,7 @@ import { Ticket, TicketSchema } from './schemas/ticket.schema.js';
     ]),
     EventsModule,
     UsersModule,
+    RealtimeModule,
   ],
   controllers: [BookingsController],
   providers: [BookingsService],

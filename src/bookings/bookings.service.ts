@@ -16,6 +16,7 @@ import {
   TicketPackageDocument,
 } from '../events/schemas/ticket-package.schema.js';
 import { TicketPackagesService } from '../events/ticket-packages.service.js';
+import { RealtimeEmitterService } from '../realtime/realtime-emitter.service.js';
 import { BookingStatus } from './enums/booking-status.enum.js';
 import { TicketStatus } from './enums/ticket-status.enum.js';
 import type { BookingLineItemDto, BookingRequestDto } from './dto/booking-items.dto.js';
@@ -54,6 +55,7 @@ export class BookingsService {
     private readonly packageModel: Model<TicketPackageDocument>,
     @InjectConnection() private readonly connection: Connection,
     private readonly packagesService: TicketPackagesService,
+    private readonly realtime: RealtimeEmitterService,
   ) {}
 
   async quote(userId: string, dto: BookingRequestDto): Promise<QuoteResult> {
@@ -137,6 +139,14 @@ export class BookingsService {
       await this.packagesService.refreshEventSoldOutStatus(
         new Types.ObjectId(dto.eventId),
       );
+
+      const availability =
+        await this.packagesService.getAvailabilityForPublicEvent(dto.eventId);
+      this.realtime.emitInventoryUpdate({
+        eventId: dto.eventId,
+        ticketsRemaining: availability.summary.ticketsRemaining,
+        isSoldOut: availability.summary.isSoldOut,
+      });
 
       return result;
     } finally {

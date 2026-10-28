@@ -30,3 +30,33 @@ export async function loginAsAdmin(app: INestApplication<App>) {
     .expect(200);
   return agent;
 }
+
+export async function createGatekeeperUser(
+  userModel: Model<UserDocument>,
+  email = 'gatekeeper@example.com',
+) {
+  const passwordHash = await hash('password123', 12);
+  return userModel.create({
+    name: 'Gate Staff',
+    email,
+    passwordHash,
+    role: UserRole.Gatekeeper,
+    status: UserStatus.Active,
+  });
+}
+
+export async function loginAsGatekeeper(
+  app: INestApplication<App>,
+  email = 'gatekeeper@example.com',
+) {
+  const agent = request.agent(app.getHttpServer());
+  await agent
+    .post('/api/v1/auth/login')
+    .send({
+      email,
+      password: 'password123',
+      intendedRole: 'gatekeeper',
+    })
+    .expect(200);
+  return agent;
+}
