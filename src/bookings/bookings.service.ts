@@ -6,8 +6,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import { Connection, Model, Types } from 'mongoose';
-import { UserRole } from '../users/enums/user-role.enum.js';
+import { Model, Types } from 'mongoose';
+import type { Connection } from 'mongoose';
 import { EventStatus } from '../events/enums/event-status.enum.js';
 import { isPackageOnSale } from '../events/inventory/inventory.calculator.js';
 import { Event, EventDocument } from '../events/schemas/event.schema.js';
@@ -111,17 +111,17 @@ export class BookingsService {
 
         const ticketRows: Array<Partial<Ticket>> = [];
         for (const item of prepared.items) {
-          const admissionTickets = item.quantity * item.admissionCount;
-          for (let i = 0; i < admissionTickets; i += 1) {
-            ticketRows.push({
-              bookingId: booking._id,
-              eventId: booking.eventId,
-              packageId: item.packageId,
-              ticketCode: generateTicketCode(),
-              qrToken: generateQrToken(),
-              status: TicketStatus.Valid,
-            });
-          }
+          const admissionsTotal = item.quantity * item.admissionCount;
+          ticketRows.push({
+            bookingId: booking._id,
+            eventId: booking.eventId,
+            packageId: item.packageId,
+            ticketCode: generateTicketCode(),
+            qrToken: generateQrToken(),
+            status: TicketStatus.Valid,
+            admissionsTotal,
+            admissionsUsed: 0,
+          });
         }
 
         const tickets = await this.ticketModel.create(ticketRows, {
@@ -161,7 +161,7 @@ export class BookingsService {
       .exec();
   }
 
-  async getByIdForUser(bookingId: string, userId: string, role: string) {
+  async getByIdForUser(bookingId: string, userId: string, _role: string) {
     if (!Types.ObjectId.isValid(bookingId)) {
       throw new NotFoundException('Booking not found');
     }
@@ -171,10 +171,7 @@ export class BookingsService {
       throw new NotFoundException('Booking not found');
     }
 
-    if (
-      booking.userId.toString() !== userId &&
-      role !== UserRole.Admin
-    ) {
+    if (booking.userId.toString() !== userId) {
       throw new ForbiddenException('You cannot access this booking');
     }
 
@@ -261,6 +258,7 @@ export class BookingsService {
     }
 
     const event = await this.eventModel.findById(dto.eventId).exec();
+    const now = new Date();
     if (!event || event.status !== EventStatus.Published) {
       throw new BadRequestException('Event is not open for booking');
     }
@@ -276,7 +274,6 @@ export class BookingsService {
     let requestedEventTotal = 0;
     const preparedItems: PreparedLine[] = [];
     let totalMinor = 0;
-    const now = new Date();
 
     for (const line of merged) {
       const pkg = packages.get(line.packageId);

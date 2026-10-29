@@ -159,6 +159,10 @@ export class TicketPackagesService {
       .exec();
   }
 
+  async deleteAllForEvent(eventId: Types.ObjectId) {
+    await this.packageModel.deleteMany({ eventId }).exec();
+  }
+
   async listByEvent(eventId: Types.ObjectId) {
     return this.packageModel.find({ eventId }).sort({ createdAt: 1 }).exec();
   }

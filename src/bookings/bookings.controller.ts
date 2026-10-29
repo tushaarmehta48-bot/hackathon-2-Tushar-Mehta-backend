@@ -8,14 +8,18 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
 import { SessionAuthGuard } from '../auth/guards/session-auth.guard.js';
 import type { SafeUser } from '../common/types/session.types.js';
+import { UserRole } from '../users/enums/user-role.enum.js';
 import { BookingsService } from './bookings.service.js';
 import { toBookingSummary, toTicketPublic } from './bookings.mapper.js';
 import { BookingRequestDto } from './dto/booking-items.dto.js';
 
 @Controller('bookings')
-@UseGuards(SessionAuthGuard)
+@UseGuards(SessionAuthGuard, RolesGuard)
+@Roles(UserRole.Attendee)
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 

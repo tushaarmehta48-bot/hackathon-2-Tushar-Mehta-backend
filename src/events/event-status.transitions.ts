@@ -9,7 +9,7 @@ const ALLOWED: Record<EventStatus, EventStatus[]> = {
     EventStatus.Cancelled,
   ],
   [EventStatus.SoldOut]: [EventStatus.Completed, EventStatus.Cancelled],
-  [EventStatus.Completed]: [],
+  [EventStatus.Completed]: [EventStatus.Published, EventStatus.SoldOut],
   [EventStatus.Cancelled]: [],
 };
 

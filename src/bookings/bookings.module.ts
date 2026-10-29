@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AuthModule } from '../auth/auth.module.js';
 import { EventsModule } from '../events/events.module.js';
 import { Event, EventSchema } from '../events/schemas/event.schema.js';
 import {
@@ -21,6 +22,7 @@ import { Ticket, TicketSchema } from './schemas/ticket.schema.js';
       { name: Event.name, schema: EventSchema },
       { name: TicketPackage.name, schema: TicketPackageSchema },
     ]),
+    AuthModule,
     EventsModule,
     UsersModule,
     RealtimeModule,

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   Post,
   Req,
@@ -17,10 +18,15 @@ import { RegisterDto } from './dto/register.dto.js';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Get('session')
+  @HttpCode(200)
+  async session(@Req() req: Request) {
+    return this.authService.getSessionForRequest(req.session?.userId);
+  }
+
   @Post('register')
-  async register(@Body() dto: RegisterDto, @Req() req: Request) {
+  async register(@Body() dto: RegisterDto) {
     const user = await this.authService.register(dto);
-    req.session.userId = user.id;
     return { user };
   }
 
@@ -37,7 +43,7 @@ export class AuthController {
   async logout(@Req() req: Request) {
     const session = req.session;
     if (!session.userId) {
-      throw new UnauthorizedException('Not authenticated');
+      return { success: true };
     }
 
     await new Promise<void>((resolve, reject) => {

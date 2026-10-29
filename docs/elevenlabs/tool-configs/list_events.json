@@ -1,0 +1,27 @@
+{
+  "type": "webhook",
+  "name": "list_events",
+  "description": "List published events on EventPulse. Optional category or fromDate filter.",
+  "api_schema": {
+    "url": "https://YOUR_PUBLIC_HOST/api/v1/agent/tools/list-events",
+    "method": "POST",
+    "request_headers": {
+      "X-EventPulse-Agent-Secret": {
+        "secret_id": "REPLACE_WITH_ELEVENLABS_SECRET"
+      }
+    },
+    "request_body_schema": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string",
+          "description": "Optional category filter"
+        },
+        "fromDate": {
+          "type": "string",
+          "description": "Optional ISO date YYYY-MM-DD for events on or after this date"
+        }
+      }
+    }
+  }
+}

@@ -1,13 +1,19 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsDate,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
   IsUrl,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
+import { LISTING_BADGES } from '../enums/listing-badge.enum.js';
+import { EVENT_IMAGE_URL_OPTIONS } from './event-image-url.validator.js';
 
 export class CreateEventDto {
   @IsString()
@@ -23,9 +29,24 @@ export class CreateEventDto {
   category!: string;
 
   @IsOptional()
-  @IsUrl()
+  @ValidateIf((_o, v) => v != null && String(v).trim() !== '')
+  @IsUrl(EVENT_IMAGE_URL_OPTIONS)
   @MaxLength(2048)
   bannerUrl?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(12)
+  @IsString({ each: true })
+  @MaxLength(2048, { each: true })
+  @IsUrl(EVENT_IMAGE_URL_OPTIONS, { each: true })
+  cardImageUrls?: string[];
+
+  @IsOptional()
+  @ValidateIf((_o, v) => v != null && String(v).trim() !== '')
+  @IsUrl(EVENT_IMAGE_URL_OPTIONS)
+  @MaxLength(2048)
+  heroImageUrl?: string;
 
   @IsString()
   @MaxLength(200)
@@ -50,6 +71,11 @@ export class CreateEventDto {
   @IsInt()
   @Min(1)
   capacity!: number;
+
+  @IsOptional()
+  @ValidateIf((_o, v) => v != null && v !== '')
+  @IsIn(LISTING_BADGES)
+  listingBadge?: (typeof LISTING_BADGES)[number];
 
   @IsOptional()
   @IsInt()

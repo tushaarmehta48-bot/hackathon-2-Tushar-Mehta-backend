@@ -1,0 +1,24 @@
+{
+  "type": "webhook",
+  "name": "list_my_bookings",
+  "description": "List bookings for the signed-in attendee.",
+  "api_schema": {
+    "url": "https://YOUR_PUBLIC_HOST/api/v1/agent/tools/list-my-bookings",
+    "method": "POST",
+    "request_headers": {
+      "X-EventPulse-Agent-Secret": {
+        "secret_id": "REPLACE_WITH_ELEVENLABS_SECRET"
+      }
+    },
+    "request_body_schema": {
+      "type": "object",
+      "properties": {
+        "agentSessionToken": {
+          "type": "string",
+          "description": "From sign_in_attendee"
+        }
+      },
+      "required": ["agentSessionToken"]
+    }
+  }
+}

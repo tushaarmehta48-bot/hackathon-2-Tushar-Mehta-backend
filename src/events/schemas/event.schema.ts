@@ -5,6 +5,10 @@ import {
   EventStatus,
   type EventStatus as EventStatusType,
 } from '../enums/event-status.enum.js';
+import {
+  LISTING_BADGES,
+  type ListingBadge as ListingBadgeType,
+} from '../enums/listing-badge.enum.js';
 
 export type EventDocument = HydratedDocument<Event> & {
   createdAt: Date;
@@ -24,6 +28,13 @@ export class Event {
 
   @Prop({ trim: true, maxlength: 2048 })
   bannerUrl?: string;
+
+  @Prop({ type: [String], default: [] })
+  cardImageUrls!: string[];
+
+  /** Wide hero shown on the public event detail page (View event). */
+  @Prop({ trim: true, maxlength: 2048 })
+  heroImageUrl?: string;
 
   @Prop({ required: true, trim: true, maxlength: 200 })
   venue!: string;
@@ -50,6 +61,10 @@ export class Event {
     default: EventStatus.Draft,
   })
   status!: EventStatusType;
+
+  /** Admin-set chip on public listings (Live / Upcoming). */
+  @Prop({ type: String, enum: LISTING_BADGES, required: false })
+  listingBadge?: ListingBadgeType;
 
   @Prop({ min: 1 })
   perUserTicketLimit?: number;

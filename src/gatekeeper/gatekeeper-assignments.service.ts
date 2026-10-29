@@ -7,6 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { AuditService } from '../audit/audit.service.js';
 import { Event, EventDocument } from '../events/schemas/event.schema.js';
+import type { UserDocument } from '../users/schemas/user.schema.js';
 import { UserRole } from '../users/enums/user-role.enum.js';
 import { UsersService } from '../users/users.service.js';
 import type { CreateAssignmentDto } from './dto/create-assignment.dto.js';
@@ -70,6 +71,17 @@ export class GatekeeperAssignmentsService {
     return assignment;
   }
 
+  async listAllForAdmin() {
+    const rows = await this.assignmentModel
+      .find({ status: AssignmentStatus.Active })
+      .sort({ updatedAt: -1 })
+      .populate('eventId', 'title venue startAt endAt timezone status category')
+      .populate('gatekeeperId', 'name email role')
+      .exec();
+
+    return rows.map((row) => this.toAdminAssignmentResponse(row));
+  }
+
   async listForGatekeeper(gatekeeperId: string) {
     if (!Types.ObjectId.isValid(gatekeeperId)) {
       return [];
@@ -124,6 +136,31 @@ export class GatekeeperAssignmentsService {
     return true;
   }
 
+  toAdminAssignmentResponse(row: GatekeeperAssignmentDocument) {
+    const base = this.toAssignmentResponse(row);
+    const keeperRef = row.gatekeeperId as unknown as
+      | Types.ObjectId
+      | (UserDocument & { _id: Types.ObjectId });
+    const keeperDoc =
+      typeof keeperRef === 'object' &&
+      keeperRef !== null &&
+      '_id' in keeperRef &&
+      'email' in keeperRef
+        ? keeperRef
+        : null;
+
+    return {
+      ...base,
+      gatekeeper: keeperDoc
+        ? {
+            id: keeperDoc._id.toString(),
+            name: keeperDoc.name,
+            email: keeperDoc.email,
+          }
+        : undefined,
+    };
+  }
+
   toAssignmentResponse(row: GatekeeperAssignmentDocument) {
     const eventRef = row.eventId as unknown as
       | Types.ObjectId
@@ -153,6 +190,7 @@ export class GatekeeperAssignmentsService {
             venue: eventDoc.venue,
             startAt: eventDoc.startAt,
             endAt: eventDoc.endAt,
+            timezone: eventDoc.timezone,
             status: eventDoc.status,
           }
         : undefined,

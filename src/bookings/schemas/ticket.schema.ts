@@ -44,6 +44,14 @@ export class Ticket {
 
   @Prop({ trim: true, maxlength: 64 })
   gateId?: string;
+
+  /** Total gate entries allowed on this QR (e.g. quantity purchased). */
+  @Prop({ default: 1, min: 1 })
+  admissionsTotal!: number;
+
+  /** How many times this QR has been scanned successfully. */
+  @Prop({ default: 0, min: 0 })
+  admissionsUsed!: number;
 }
 
 export const TicketSchema = SchemaFactory.createForClass(Ticket);

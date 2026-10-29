@@ -88,6 +88,11 @@ describe('Admin reports (e2e)', () => {
       })
       .expect(201);
 
+    await attendee
+      .post('/api/v1/auth/login')
+      .send({ email: 'fan@example.com', password: 'password123' })
+      .expect(200);
+
     const booking = await attendee
       .post('/api/v1/bookings')
       .send({

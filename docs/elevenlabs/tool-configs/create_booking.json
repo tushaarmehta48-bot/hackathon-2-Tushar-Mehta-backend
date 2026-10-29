@@ -1,0 +1,46 @@
+{
+  "type": "webhook",
+  "name": "create_booking",
+  "description": "Create a ticket booking after the guest confirmed the quote. Requires sign_in_attendee session token.",
+  "api_schema": {
+    "url": "https://YOUR_PUBLIC_HOST/api/v1/agent/tools/create-booking",
+    "method": "POST",
+    "request_headers": {
+      "X-EventPulse-Agent-Secret": {
+        "secret_id": "REPLACE_WITH_ELEVENLABS_SECRET"
+      }
+    },
+    "request_body_schema": {
+      "type": "object",
+      "properties": {
+        "agentSessionToken": {
+          "type": "string",
+          "description": "Token from sign_in_attendee data.agentSessionToken"
+        },
+        "eventId": {
+          "type": "string",
+          "description": "Event MongoDB id"
+        },
+        "packageId": {
+          "type": "string",
+          "description": "Ticket package MongoDB id"
+        },
+        "quantity": {
+          "type": "integer",
+          "description": "Number of tickets"
+        },
+        "userConfirmed": {
+          "type": "boolean",
+          "description": "Must be true only after explicit guest confirmation"
+        }
+      },
+      "required": [
+        "agentSessionToken",
+        "eventId",
+        "packageId",
+        "quantity",
+        "userConfirmed"
+      ]
+    }
+  }
+}

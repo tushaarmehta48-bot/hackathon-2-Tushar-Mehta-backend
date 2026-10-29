@@ -1,13 +1,17 @@
+import { resolveCardImageUrls } from './event-images.util.js';
 import { EventDocument } from './schemas/event.schema.js';
 import { TicketPackageDocument } from './schemas/ticket-package.schema.js';
 
 export function toPublicEvent(event: EventDocument) {
+  const cardImageUrls = resolveCardImageUrls(event);
   return {
     id: event._id.toString(),
     title: event.title,
     description: event.description,
     category: event.category,
-    bannerUrl: event.bannerUrl,
+    cardImageUrls,
+    bannerUrl: cardImageUrls[0] ?? event.bannerUrl,
+    heroImageUrl: event.heroImageUrl?.trim() || undefined,
     venue: event.venue,
     address: event.address,
     startAt: event.startAt,
@@ -15,6 +19,7 @@ export function toPublicEvent(event: EventDocument) {
     timezone: event.timezone,
     capacity: event.capacity,
     status: event.status,
+    listingBadge: event.listingBadge ?? null,
     perUserTicketLimit: event.perUserTicketLimit,
     cancellationPolicy: event.cancellationPolicy,
     refundPolicy: event.refundPolicy,

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -75,5 +76,10 @@ export class AdminEventsController {
   ) {
     const event = await this.eventsService.update(id, dto, user.id);
     return { event: toAdminEvent(event) };
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string, @CurrentUser() user: SafeUser) {
+    return this.eventsService.remove(id, user.id);
   }
 }

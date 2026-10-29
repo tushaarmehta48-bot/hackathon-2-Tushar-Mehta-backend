@@ -1,4 +1,6 @@
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
+import { getConnectionToken } from '@nestjs/mongoose';
+import type { Connection } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -41,6 +43,16 @@ async function bootstrap() {
 
   const port = config.get<number>('port') ?? 3000;
   await app.listen(port);
+
+  const mongo = app.get<Connection>(getConnectionToken());
+  if (mongo.readyState !== 1) {
+    Logger.warn(
+      `MongoDB not ready (state=${mongo.readyState}). Check MONGODB_URI and that MongoDB is running.`,
+      'Bootstrap',
+    );
+  }
+
+  Logger.log(`EventPulse API listening on http://localhost:${port}/api/v1`, 'Bootstrap');
 }
 
-await bootstrap();
+void bootstrap();

@@ -88,6 +88,11 @@ describe('Gatekeeper (e2e)', () => {
       })
       .expect(201);
 
+    await attendee
+      .post('/api/v1/auth/login')
+      .send({ email: 'guest@example.com', password: 'password123' })
+      .expect(200);
+
     const booking = await attendee
       .post('/api/v1/bookings')
       .send({
@@ -147,7 +152,63 @@ describe('Gatekeeper (e2e)', () => {
     expect(res.body.result).toBe('unauthorised');
   });
 
-  it('allows only one success under parallel scans', async () => {
+  it('allows multiple scans on one QR when quantity is greater than one', async () => {
+    const admin = await loginAsAdmin(app);
+    const eventRes = await admin.post('/api/v1/admin/events').send(sampleEvent).expect(201);
+    const eventId = eventRes.body.event.id as string;
+    const pkgRes = await admin
+      .post(`/api/v1/admin/events/${eventId}/packages`)
+      .send({
+        name: 'Entry',
+        priceMinor: 10000,
+        admissionCount: 1,
+        quantityTotal: 20,
+      })
+      .expect(201);
+    await admin
+      .patch(`/api/v1/admin/events/${eventId}/status`)
+      .send({ status: 'published' })
+      .expect(200);
+    const gatekeeper = await userModel.findOne({ email: 'gatekeeper@example.com' });
+    await admin
+      .post(`/api/v1/admin/gatekeepers/${gatekeeper!._id.toString()}/assignments`)
+      .send({ eventId, gateId: 'GATE-A' })
+      .expect(201);
+    const attendee = request.agent(app.getHttpServer());
+    await attendee
+      .post('/api/v1/auth/register')
+      .send({ name: 'Group', email: 'group@example.com', password: 'password123' })
+      .expect(201);
+    await attendee
+      .post('/api/v1/auth/login')
+      .send({ email: 'group@example.com', password: 'password123' })
+      .expect(200);
+    const booking = await attendee
+      .post('/api/v1/bookings')
+      .send({
+        eventId,
+        items: [{ packageId: pkgRes.body.package.id, quantity: 5 }],
+      })
+      .expect(201);
+    const qrToken = booking.body.tickets[0].qrToken as string;
+    const staff = await loginAsGatekeeper(app);
+
+    for (let i = 0; i < 5; i += 1) {
+      const scan = await staff
+        .post('/api/v1/gatekeeper/check-in')
+        .send({ qrToken, gateId: 'GATE-A' })
+        .expect(201);
+      expect(scan.body.result).toBe('success');
+    }
+
+    const sixth = await staff
+      .post('/api/v1/gatekeeper/check-in')
+      .send({ qrToken, gateId: 'GATE-A' })
+      .expect(201);
+    expect(sixth.body.result).toBe('already_used');
+  });
+
+  it('allows only one success under parallel scans for single admission', async () => {
     const { qrToken } = await publishEventWithTicket();
     const staff = await loginAsGatekeeper(app);
 

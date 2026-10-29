@@ -61,6 +61,12 @@ export class UsersService {
     return this.userModel.find({ role, status: UserStatus.Active }).exec();
   }
 
+  updatePasswordHash(userId: string, passwordHash: string) {
+    return this.userModel
+      .findByIdAndUpdate(userId, { passwordHash }, { new: true })
+      .exec();
+  }
+
   async createAdminIfMissing(name: string, email: string, passwordHash: string) {
     const existing = await this.findByEmail(email);
     if (existing) {

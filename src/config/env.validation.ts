@@ -22,16 +22,19 @@ class EnvironmentVariables {
 
   @Transform(({ value }) => {
     if (value === undefined || value === null || value === '') {
-      return 3000;
+      return 3001;
     }
     const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 3000;
+    return Number.isFinite(parsed) ? parsed : 3001;
   })
   @IsInt()
   @Min(1)
   @IsOptional()
-  PORT = 3000;
+  PORT = 3001;
 
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @MinLength(1)
   MONGODB_URI!: string;

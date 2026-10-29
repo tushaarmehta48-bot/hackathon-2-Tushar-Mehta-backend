@@ -7,6 +7,11 @@ import { AdminEventsController } from './admin-events.controller.js';
 import { AdminPackagesController } from './admin-packages.controller.js';
 import { EventsController } from './events.controller.js';
 import { EventsService } from './events.service.js';
+import { Booking, BookingSchema } from '../bookings/schemas/booking.schema.js';
+import {
+  GatekeeperAssignment,
+  GatekeeperAssignmentSchema,
+} from '../gatekeeper/schemas/gatekeeper-assignment.schema.js';
 import { Event, EventSchema } from './schemas/event.schema.js';
 import {
   TicketPackage,
@@ -19,6 +24,8 @@ import { TicketPackagesService } from './ticket-packages.service.js';
     MongooseModule.forFeature([
       { name: Event.name, schema: EventSchema },
       { name: TicketPackage.name, schema: TicketPackageSchema },
+      { name: Booking.name, schema: BookingSchema },
+      { name: GatekeeperAssignment.name, schema: GatekeeperAssignmentSchema },
     ]),
     AuditModule,
     UsersModule,

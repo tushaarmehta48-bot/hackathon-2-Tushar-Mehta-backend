@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { MulterError } from 'multer';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -16,6 +17,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
+
+    if (exception instanceof MulterError) {
+      const status = HttpStatus.BAD_REQUEST;
+      const message =
+        exception.code === 'LIMIT_FILE_SIZE'
+          ? 'Image must be 5 MB or smaller.'
+          : exception.message;
+      response.status(status).json({ statusCode: status, message });
+      return;
+    }
 
     const isHttp = exception instanceof HttpException;
     const status = isHttp

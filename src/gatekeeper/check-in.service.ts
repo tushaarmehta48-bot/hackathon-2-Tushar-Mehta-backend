@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import { Connection, Model, Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
+import type { Connection } from 'mongoose';
 import { TicketStatus } from '../bookings/enums/ticket-status.enum.js';
 import { Ticket, TicketDocument } from '../bookings/schemas/ticket.schema.js';
 import { EventStatus } from '../events/enums/event-status.enum.js';
@@ -20,6 +21,9 @@ export type CheckInResponse = {
     eventId: string;
     status: string;
     checkedInAt?: Date;
+    admissionsTotal: number;
+    admissionsUsed: number;
+    admissionsRemaining: number;
   };
 };
 
@@ -44,9 +48,12 @@ export class CheckInService {
       await this.logAttempt(null, gatekeeperId, dto, CheckInResult.Invalid);
       return {
         result: CheckInResult.Invalid,
-        message: 'Invalid ticket',
+        message: 'Invalid or unknown QR code',
       };
     }
+
+    const admissionsTotal = ticket.admissionsTotal ?? 1;
+    const admissionsUsed = ticket.admissionsUsed ?? 0;
 
     if (ticket.status === TicketStatus.Cancelled) {
       await this.logAttempt(ticket, gatekeeperId, dto, CheckInResult.Cancelled);
@@ -56,11 +63,14 @@ export class CheckInService {
       };
     }
 
-    if (ticket.status === TicketStatus.CheckedIn) {
+    if (
+      ticket.status === TicketStatus.CheckedIn ||
+      admissionsUsed >= admissionsTotal
+    ) {
       await this.logAttempt(ticket, gatekeeperId, dto, CheckInResult.AlreadyUsed);
       return {
         result: CheckInResult.AlreadyUsed,
-        message: 'Ticket already checked in',
+        message: 'All admissions on this QR have already been used',
         ticket: this.toTicketSummary(ticket),
       };
     }
@@ -100,25 +110,33 @@ export class CheckInService {
     const session = await this.connection.startSession();
     try {
       const updated = await session.withTransaction(async () => {
-        const row = await this.ticketModel.findOneAndUpdate(
-          {
+        const row = await this.ticketModel
+          .findOne({
             _id: ticket._id,
             status: TicketStatus.Valid,
-          },
-          {
-            $set: {
-              status: TicketStatus.CheckedIn,
-              checkedInAt: new Date(),
-              checkedInBy: new Types.ObjectId(gatekeeperId),
-              gateId: dto.gateId?.trim(),
+            $expr: {
+              $lt: [
+                { $ifNull: ['$admissionsUsed', 0] },
+                { $ifNull: ['$admissionsTotal', 1] },
+              ],
             },
-          },
-          { returnDocument: 'after', session },
-        );
+          })
+          .session(session);
 
         if (!row) {
           return null;
         }
+
+        const total = row.admissionsTotal ?? 1;
+        const nextUsed = (row.admissionsUsed ?? 0) + 1;
+        row.admissionsUsed = nextUsed;
+        row.checkedInAt = new Date();
+        row.checkedInBy = new Types.ObjectId(gatekeeperId);
+        row.gateId = dto.gateId?.trim();
+        if (nextUsed >= total) {
+          row.status = TicketStatus.CheckedIn;
+        }
+        await row.save({ session });
 
         await this.checkInModel.create(
           [
@@ -146,14 +164,19 @@ export class CheckInService {
         );
         return {
           result: CheckInResult.AlreadyUsed,
-          message: 'Ticket already checked in',
+          message: 'All admissions on this QR have already been used',
         };
       }
 
+      const summary = this.toTicketSummary(updated);
+      const remaining = summary.admissionsRemaining;
       const response: CheckInResponse = {
         result: CheckInResult.Success,
-        message: 'Check-in successful',
-        ticket: this.toTicketSummary(updated),
+        message:
+          remaining > 0
+            ? `Checked in successfully (${summary.admissionsUsed} of ${summary.admissionsTotal} — ${remaining} left on this QR)`
+            : `Checked in successfully — all ${summary.admissionsTotal} guest(s) on this QR are now in`,
+        ticket: summary,
       };
 
       const checkedInTotal = await this.ticketModel.countDocuments({
@@ -173,12 +196,17 @@ export class CheckInService {
   }
 
   private toTicketSummary(ticket: TicketDocument) {
+    const admissionsTotal = ticket.admissionsTotal ?? 1;
+    const admissionsUsed = ticket.admissionsUsed ?? 0;
     return {
       id: ticket._id.toString(),
       ticketCode: ticket.ticketCode,
       eventId: ticket.eventId.toString(),
       status: ticket.status,
       checkedInAt: ticket.checkedInAt,
+      admissionsTotal,
+      admissionsUsed,
+      admissionsRemaining: Math.max(0, admissionsTotal - admissionsUsed),
     };
   }
 

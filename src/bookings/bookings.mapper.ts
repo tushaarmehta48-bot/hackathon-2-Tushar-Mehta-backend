@@ -22,6 +22,8 @@ export function toBookingSummary(booking: BookingDocument) {
 }
 
 export function toTicketPublic(ticket: TicketDocument) {
+  const admissionsTotal = ticket.admissionsTotal ?? 1;
+  const admissionsUsed = ticket.admissionsUsed ?? 0;
   return {
     id: ticket._id.toString(),
     ticketCode: ticket.ticketCode,
@@ -30,5 +32,8 @@ export function toTicketPublic(ticket: TicketDocument) {
     packageId: ticket.packageId.toString(),
     status: ticket.status,
     checkedInAt: ticket.checkedInAt,
+    admissionsTotal,
+    admissionsUsed,
+    admissionsRemaining: Math.max(0, admissionsTotal - admissionsUsed),
   };
 }

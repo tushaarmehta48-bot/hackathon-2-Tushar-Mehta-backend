@@ -45,6 +45,24 @@ export async function createGatekeeperUser(
   });
 }
 
+export async function registerAttendee(
+  app: INestApplication<App>,
+  email: string,
+  password = 'password123',
+  name = 'Attendee',
+) {
+  const agent = request.agent(app.getHttpServer());
+  await agent
+    .post('/api/v1/auth/register')
+    .send({ name, email, password })
+    .expect(201);
+  await agent
+    .post('/api/v1/auth/login')
+    .send({ email, password })
+    .expect(200);
+  return agent;
+}
+
 export async function loginAsGatekeeper(
   app: INestApplication<App>,
   email = 'gatekeeper@example.com',

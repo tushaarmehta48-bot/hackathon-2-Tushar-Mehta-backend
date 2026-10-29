@@ -76,6 +76,11 @@ describe('Feedback (e2e)', () => {
       })
       .expect(201);
 
+    await attendee
+      .post('/api/v1/auth/login')
+      .send({ email: 'guest-fb@example.com', password: 'password123' })
+      .expect(200);
+
     const booking = await attendee
       .post('/api/v1/bookings')
       .send({
@@ -145,6 +150,11 @@ describe('Feedback (e2e)', () => {
         password: 'password123',
       })
       .expect(201);
+
+    await attendee
+      .post('/api/v1/auth/login')
+      .send({ email: 'guest2-fb@example.com', password: 'password123' })
+      .expect(200);
 
     const booking = await attendee
       .post('/api/v1/bookings')

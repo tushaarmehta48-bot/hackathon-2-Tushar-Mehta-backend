@@ -1,0 +1,27 @@
+{
+  "type": "webhook",
+  "name": "quote_booking",
+  "description": "Price a booking before checkout. Requires attendee sign-in token.",
+  "api_schema": {
+    "url": "https://YOUR_PUBLIC_HOST/api/v1/agent/tools/quote-booking",
+    "method": "POST",
+    "request_headers": {
+      "X-EventPulse-Agent-Secret": {
+        "secret_id": "REPLACE_WITH_ELEVENLABS_SECRET"
+      }
+    },
+    "request_body_schema": {
+      "type": "object",
+      "properties": {
+        "agentSessionToken": {
+          "type": "string",
+          "description": "From sign_in_attendee"
+        },
+        "eventId": { "type": "string" },
+        "packageId": { "type": "string" },
+        "quantity": { "type": "integer", "description": "Ticket count, min 1" }
+      },
+      "required": ["agentSessionToken", "eventId", "packageId", "quantity"]
+    }
+  }
+}

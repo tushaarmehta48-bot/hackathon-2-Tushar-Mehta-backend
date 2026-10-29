@@ -36,7 +36,7 @@ describe('Auth (e2e)', () => {
     }
   });
 
-  it('registers attendee, sets session, and returns /users/me', async () => {
+  it('registers attendee without session until login', async () => {
     const agent = request.agent(app.getHttpServer());
 
     await agent
@@ -47,6 +47,13 @@ describe('Auth (e2e)', () => {
         password: 'password123',
       })
       .expect(201);
+
+    await agent.get('/api/v1/users/me').expect(401);
+
+    await agent
+      .post('/api/v1/auth/login')
+      .send({ email: 'alex@example.com', password: 'password123' })
+      .expect(200);
 
     const me = await agent.get('/api/v1/users/me').expect(200);
     expect(me.body.user.email).toBe('alex@example.com');

@@ -10,8 +10,10 @@ import {
 } from '../events/schemas/ticket-package.schema.js';
 import { CheckIn, CheckInSchema } from '../gatekeeper/schemas/check-in.schema.js';
 import { UsersModule } from '../users/users.module.js';
+import { AdminMediaController } from './admin-media.controller.js';
 import { AdminReportsController } from './admin-reports.controller.js';
 import { AdminReportsService } from './admin-reports.service.js';
+import { AdminUploadController } from './admin-upload.controller.js';
 
 @Module({
   imports: [
@@ -25,7 +27,11 @@ import { AdminReportsService } from './admin-reports.service.js';
     UsersModule,
     AuthModule,
   ],
-  controllers: [AdminReportsController],
+  controllers: [
+    AdminReportsController,
+    AdminUploadController,
+    AdminMediaController,
+  ],
   providers: [AdminReportsService],
 })
 export class AdminModule {}

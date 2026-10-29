@@ -9,7 +9,11 @@ import {
   TicketPackageDocument,
 } from '../src/events/schemas/ticket-package.schema.js';
 import { User, UserDocument } from '../src/users/schemas/user.schema.js';
-import { createAdminUser, loginAsAdmin } from './helpers/auth-agent.js';
+import {
+  createAdminUser,
+  loginAsAdmin,
+  registerAttendee,
+} from './helpers/auth-agent.js';
 import {
   closeTestApp,
   createTestApp,
@@ -28,19 +32,6 @@ const sampleEvent = {
   capacity: 100,
   perUserTicketLimit: 10,
 };
-
-async function registerAttendee(app: INestApplication<App>, email: string) {
-  const agent = request.agent(app.getHttpServer());
-  await agent
-    .post('/api/v1/auth/register')
-    .send({
-      name: 'Attendee',
-      email,
-      password: 'password123',
-    })
-    .expect(201);
-  return agent;
-}
 
 describe('Bookings (e2e)', () => {
   let app: INestApplication<App>;
@@ -95,6 +86,19 @@ describe('Bookings (e2e)', () => {
     };
   }
 
+  it('forbids admin and gatekeeper from booking endpoints', async () => {
+    const { eventId, packageId } = await publishEvent(10);
+    const admin = await loginAsAdmin(app);
+    const body = {
+      eventId,
+      items: [{ packageId, quantity: 1 }],
+    };
+
+    await admin.post('/api/v1/bookings/quote').send(body).expect(403);
+    await admin.post('/api/v1/bookings').send(body).expect(403);
+    await admin.get('/api/v1/bookings/me').expect(403);
+  });
+
   it('quotes, books, and returns tickets with unique QR tokens', async () => {
     const { eventId, packageId } = await publishEvent(20);
     const attendee = await registerAttendee(app, 'booker@example.com');
@@ -117,9 +121,10 @@ describe('Bookings (e2e)', () => {
       })
       .expect(201);
 
-    expect(book.body.tickets).toHaveLength(2);
+    expect(book.body.tickets).toHaveLength(1);
+    expect(book.body.tickets[0].admissionsTotal).toBe(2);
     const tokens = new Set(book.body.tickets.map((t: { qrToken: string }) => t.qrToken));
-    expect(tokens.size).toBe(2);
+    expect(tokens.size).toBe(1);
 
     const me = await attendee.get('/api/v1/bookings/me').expect(200);
     expect(me.body.bookings).toHaveLength(1);
@@ -127,7 +132,8 @@ describe('Bookings (e2e)', () => {
     const tickets = await attendee
       .get(`/api/v1/bookings/${book.body.booking.id}/tickets`)
       .expect(200);
-    expect(tickets.body.tickets).toHaveLength(2);
+    expect(tickets.body.tickets).toHaveLength(1);
+    expect(tickets.body.tickets[0].admissionsTotal).toBe(2);
   });
 
   it('enforces per-user event ticket limit', async () => {

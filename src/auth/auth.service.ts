@@ -32,6 +32,17 @@ export class AuthService {
     return this.usersService.toSafeUser(user);
   }
 
+  async getSessionForRequest(sessionUserId?: string) {
+    if (!sessionUserId) {
+      return { user: null };
+    }
+    const doc = await this.usersService.findById(sessionUserId);
+    if (!doc) {
+      return { user: null };
+    }
+    return { user: this.usersService.toSafeUser(doc) };
+  }
+
   async login(dto: LoginDto) {
     const user = await this.usersService.findByEmailWithPassword(dto.email);
     if (!user?.passwordHash) {

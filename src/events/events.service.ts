@@ -14,6 +14,15 @@ import {
   assertStatusTransition,
   isEventEditable,
 } from './event-status.transitions.js';
+import {
+  applyCardImagesToDocument,
+  normalizeCardImageInput,
+} from './event-images.util.js';
+import { Booking, BookingDocument } from '../bookings/schemas/booking.schema.js';
+import {
+  GatekeeperAssignment,
+  GatekeeperAssignmentDocument,
+} from '../gatekeeper/schemas/gatekeeper-assignment.schema.js';
 import { Event, EventDocument } from './schemas/event.schema.js';
 import { TicketPackagesService } from './ticket-packages.service.js';
 
@@ -27,6 +36,10 @@ const PUBLIC_STATUSES: EventStatus[] = [
 export class EventsService {
   constructor(
     @InjectModel(Event.name) private readonly eventModel: Model<EventDocument>,
+    @InjectModel(Booking.name)
+    private readonly bookingModel: Model<BookingDocument>,
+    @InjectModel(GatekeeperAssignment.name)
+    private readonly assignmentModel: Model<GatekeeperAssignmentDocument>,
     private readonly packagesService: TicketPackagesService,
     private readonly auditService: AuditService,
   ) {}
@@ -40,11 +53,15 @@ export class EventsService {
   async create(dto: CreateEventDto, actorId: string) {
     this.validateDates(dto.startAt, dto.endAt);
 
+    const images = normalizeCardImageInput(dto);
     const event = await this.eventModel.create({
       title: dto.title.trim(),
       description: dto.description.trim(),
       category: dto.category.trim(),
-      bannerUrl: dto.bannerUrl?.trim(),
+      bannerUrl: images?.bannerUrl,
+      cardImageUrls: images?.cardImageUrls ?? [],
+      heroImageUrl: dto.heroImageUrl?.trim(),
+      listingBadge: dto.listingBadge,
       venue: dto.venue.trim(),
       address: dto.address.trim(),
       startAt: dto.startAt,
@@ -87,7 +104,17 @@ export class EventsService {
       event.description = dto.description.trim();
     }
     if (dto.category !== undefined) event.category = dto.category.trim();
-    if (dto.bannerUrl !== undefined) event.bannerUrl = dto.bannerUrl?.trim();
+    const images = normalizeCardImageInput(dto);
+    if (images) {
+      applyCardImagesToDocument(event, images);
+    }
+    if (dto.heroImageUrl !== undefined) {
+      const trimmed = dto.heroImageUrl?.trim();
+      event.heroImageUrl = trimmed || undefined;
+    }
+    if ('listingBadge' in dto) {
+      event.listingBadge = dto.listingBadge ?? undefined;
+    }
     if (dto.venue !== undefined) event.venue = dto.venue.trim();
     if (dto.address !== undefined) event.address = dto.address.trim();
     if (dto.startAt !== undefined) event.startAt = dto.startAt;
@@ -201,5 +228,36 @@ export class EventsService {
 
   async listAdmin() {
     return this.eventModel.find().sort({ startAt: -1 }).exec();
+  }
+
+  async remove(eventId: string, actorId: string) {
+    const event = await this.findByIdOrFail(eventId);
+    const eventObjectId = event._id;
+
+    const bookingCount = await this.bookingModel
+      .countDocuments({ eventId: eventObjectId })
+      .exec();
+    if (bookingCount > 0) {
+      throw new BadRequestException(
+        'Cannot delete an event that has bookings. Cancel bookings first or keep the event archived.',
+      );
+    }
+
+    await this.packagesService.deleteAllForEvent(eventObjectId);
+    await this.assignmentModel
+      .deleteMany({ eventId: eventObjectId })
+      .exec();
+
+    await event.deleteOne();
+
+    await this.auditService.log({
+      actorId,
+      action: 'event.delete',
+      targetType: 'event',
+      targetId: eventId,
+      metadata: { title: event.title },
+    });
+
+    return { ok: true as const };
   }
 }
