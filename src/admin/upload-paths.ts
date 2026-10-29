@@ -1,8 +1,10 @@
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 export function eventBannerDir() {
-  const dir = join(process.cwd(), 'uploads', 'event-banners');
+  const backendDir = join(process.cwd(), 'backend', 'uploads', 'event-banners');
+  const rootDir = join(process.cwd(), 'uploads', 'event-banners');
+  const dir = existsSync(backendDir) || existsSync(join(process.cwd(), 'backend')) ? backendDir : rootDir;
   mkdirSync(dir, { recursive: true });
   return dir;
 }

@@ -13,7 +13,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { LISTING_BADGES } from '../enums/listing-badge.enum.js';
-import { EVENT_IMAGE_URL_OPTIONS } from './event-image-url.validator.js';
+import { IsEventImageUrl } from './event-image-url.validator.js';
 
 export class CreateEventDto {
   @IsString()
@@ -30,7 +30,7 @@ export class CreateEventDto {
 
   @IsOptional()
   @ValidateIf((_o, v) => v != null && String(v).trim() !== '')
-  @IsUrl(EVENT_IMAGE_URL_OPTIONS)
+  @IsEventImageUrl()
   @MaxLength(2048)
   bannerUrl?: string;
 
@@ -39,12 +39,12 @@ export class CreateEventDto {
   @ArrayMaxSize(12)
   @IsString({ each: true })
   @MaxLength(2048, { each: true })
-  @IsUrl(EVENT_IMAGE_URL_OPTIONS, { each: true })
+  @IsEventImageUrl({ each: true })
   cardImageUrls?: string[];
 
   @IsOptional()
   @ValidateIf((_o, v) => v != null && String(v).trim() !== '')
-  @IsUrl(EVENT_IMAGE_URL_OPTIONS)
+  @IsEventImageUrl()
   @MaxLength(2048)
   heroImageUrl?: string;
 

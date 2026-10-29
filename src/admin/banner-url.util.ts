@@ -5,8 +5,11 @@ import { isSafeBannerFilename } from './upload-paths.js';
 export function filenameFromEventBannerUrl(url: string): string | null {
   const trimmed = url.trim();
   if (!trimmed) return null;
+  if (isSafeBannerFilename(trimmed)) {
+    return trimmed;
+  }
   try {
-    const parsed = new URL(trimmed);
+    const parsed = new URL(trimmed, 'http://localhost');
     const parts = parsed.pathname.split('/').filter(Boolean);
     const idx = parts.findIndex((p) => p === 'event-banners');
     const name = idx >= 0 ? parts[idx + 1] : parts.at(-1);
