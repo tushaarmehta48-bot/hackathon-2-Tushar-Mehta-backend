@@ -3,14 +3,17 @@ import { getConnectionToken } from '@nestjs/mongoose';
 import type { Connection } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { configureSession } from './common/session/configure-session.js';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
+
+  app.set('trust proxy', 1);
 
   configureSession(app);
 
@@ -42,7 +45,7 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   const port = config.get<number>('port') ?? 3000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   const mongo = app.get<Connection>(getConnectionToken());
   if (mongo.readyState !== 1) {

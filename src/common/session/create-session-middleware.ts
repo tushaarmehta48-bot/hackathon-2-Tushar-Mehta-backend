@@ -5,6 +5,7 @@ export function createSessionMiddleware(options: {
   secret: string;
   nodeEnv: string;
   mongoUri?: string;
+  crossSiteCookies?: boolean;
 }) {
   const store =
     options.nodeEnv === 'test'
@@ -23,7 +24,10 @@ export function createSessionMiddleware(options: {
     cookie: {
       httpOnly: true,
       secure: options.nodeEnv === 'production',
-      sameSite: 'lax',
+      sameSite:
+        options.nodeEnv === 'production' && options.crossSiteCookies
+          ? 'none'
+          : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     },
   });

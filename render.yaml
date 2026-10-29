@@ -1,0 +1,27 @@
+# Render Blueprint — EventPulse API
+# Dashboard: https://dashboard.render.com/web/srv-dbhho349v7es73b0672g
+services:
+  - type: web
+    name: hackathon-2-Tushar-Mehta-backend
+    runtime: node
+    region: singapore
+    plan: free
+    branch: main
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        sync: false
+      - key: BOOTSTRAP_ADMIN_EMAIL
+        sync: false
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        sync: false
+      - key: EVENTPULSE_AGENT_WEBHOOK_SECRET
+        generateValue: true

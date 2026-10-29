@@ -7,6 +7,11 @@ export function configureSession(app: INestApplication) {
   const secret = config.get<string>('session.secret');
   const nodeEnv = config.get<string>('nodeEnv') ?? 'development';
   const mongoUri = config.get<string>('mongodb.uri');
+  const corsOrigin = config.get<string>('corsOrigin') ?? '';
+  const crossSiteCookies =
+    nodeEnv === 'production' &&
+    Boolean(corsOrigin) &&
+    !corsOrigin.includes('localhost');
 
   if (!secret) {
     throw new Error('SESSION_SECRET is required');
@@ -17,6 +22,7 @@ export function configureSession(app: INestApplication) {
       secret,
       nodeEnv,
       mongoUri,
+      crossSiteCookies,
     }),
   );
 }
