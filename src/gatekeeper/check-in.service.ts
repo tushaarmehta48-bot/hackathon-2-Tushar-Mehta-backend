@@ -179,10 +179,16 @@ export class CheckInService {
         ticket: summary,
       };
 
-      const checkedInTotal = await this.ticketModel.countDocuments({
-        eventId: updated.eventId,
-        status: TicketStatus.CheckedIn,
-      });
+      const checkedInAgg = await this.ticketModel.aggregate<{ total: number }>([
+        { $match: { eventId: updated.eventId } },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: { $ifNull: ['$admissionsUsed', 0] } },
+          },
+        },
+      ]);
+      const checkedInTotal = checkedInAgg[0]?.total ?? 0;
       this.realtime.emitCheckInUpdate({
         eventId: updated.eventId.toString(),
         checkedInTotal,

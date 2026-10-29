@@ -2,7 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { BookingStatus } from '../bookings/enums/booking-status.enum.js';
-import { TicketStatus } from '../bookings/enums/ticket-status.enum.js';
 import { Booking, BookingDocument } from '../bookings/schemas/booking.schema.js';
 import { Ticket, TicketDocument } from '../bookings/schemas/ticket.schema.js';
 import { Event, EventDocument } from '../events/schemas/event.schema.js';
@@ -164,10 +163,16 @@ export class AdminReportsService {
       0,
     );
 
-    const admissionsCheckedIn = await this.ticketModel.countDocuments({
-      eventId: event._id,
-      status: TicketStatus.CheckedIn,
-    });
+    const checkedInAgg = await this.ticketModel.aggregate<{ total: number }>([
+      { $match: { eventId: event._id } },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: { $ifNull: ['$admissionsUsed', 0] } },
+        },
+      },
+    ]);
+    const admissionsCheckedIn = checkedInAgg[0]?.total ?? 0;
 
     const revenueAgg = await this.bookingModel.aggregate<{ total: number }>([
       {

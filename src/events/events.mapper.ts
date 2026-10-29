@@ -1,17 +1,20 @@
+import { toPublicMediaPath, toPublicMediaPaths } from '../admin/public-media-url.js';
 import { resolveCardImageUrls } from './event-images.util.js';
 import { EventDocument } from './schemas/event.schema.js';
 import { TicketPackageDocument } from './schemas/ticket-package.schema.js';
 
 export function toPublicEvent(event: EventDocument) {
-  const cardImageUrls = resolveCardImageUrls(event);
+  const cardImageUrls = toPublicMediaPaths(resolveCardImageUrls(event));
+  const bannerUrl = cardImageUrls[0] ?? toPublicMediaPath(event.bannerUrl);
+  const heroImageUrl = toPublicMediaPath(event.heroImageUrl);
   return {
     id: event._id.toString(),
     title: event.title,
     description: event.description,
     category: event.category,
     cardImageUrls,
-    bannerUrl: cardImageUrls[0] ?? event.bannerUrl,
-    heroImageUrl: event.heroImageUrl?.trim() || undefined,
+    bannerUrl,
+    heroImageUrl,
     venue: event.venue,
     address: event.address,
     startAt: event.startAt,

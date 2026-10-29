@@ -10,6 +10,7 @@ export default () => ({
     uri: normalizeMongoUri(process.env.MONGODB_URI),
   },
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:3000',
+  publicApiUrl: process.env.PUBLIC_API_URL?.trim(),
   session: {
     secret: process.env.SESSION_SECRET ?? defaultSessionSecret,
   },

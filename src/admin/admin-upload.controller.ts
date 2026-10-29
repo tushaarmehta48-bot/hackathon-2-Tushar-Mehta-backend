@@ -23,6 +23,7 @@ import { SessionAuthGuard } from '../auth/guards/session-auth.guard.js';
 import { UserRole } from '../users/enums/user-role.enum.js';
 import { DeleteEventBannerDto } from './dto/delete-event-banner.dto.js';
 import { filenameFromEventBannerUrl } from './banner-url.util.js';
+import { buildUploadedMediaUrl } from './public-media-url.js';
 import { eventBannerDir } from './upload-paths.js';
 
 const MAX_BANNER_BYTES = 5 * 1024 * 1024;
@@ -86,9 +87,10 @@ export class AdminUploadController {
         'No image file received. Choose a file after cropping, or sign in again as admin.',
       );
     }
-    const host = req.get('host') ?? 'localhost:3001';
-    const proto = req.protocol ?? 'http';
-    const url = `${proto}://${host}/api/v1/media/event-banners/${file.filename}`;
+    const url = buildUploadedMediaUrl(
+      file.filename,
+      process.env.PUBLIC_API_URL?.trim(),
+    );
     return { url };
   }
 
