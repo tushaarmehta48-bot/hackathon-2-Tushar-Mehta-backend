@@ -9,6 +9,7 @@ import {
   TicketPackageSchema,
 } from '../events/schemas/ticket-package.schema.js';
 import { CheckIn, CheckInSchema } from '../gatekeeper/schemas/check-in.schema.js';
+import { StoredMedia, StoredMediaSchema } from './schemas/stored-media.schema.js';
 import { User, UserSchema } from '../users/schemas/user.schema.js';
 import { UsersModule } from '../users/users.module.js';
 import { AdminMediaController } from './admin-media.controller.js';
@@ -25,6 +26,7 @@ import { AdminUploadController } from './admin-upload.controller.js';
       { name: Booking.name, schema: BookingSchema },
       { name: CheckIn.name, schema: CheckInSchema },
       { name: User.name, schema: UserSchema },
+      { name: StoredMedia.name, schema: StoredMediaSchema },
     ]),
     UsersModule,
     AuthModule,

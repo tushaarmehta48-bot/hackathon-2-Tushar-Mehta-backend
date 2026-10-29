@@ -1,8 +1,11 @@
 import { Controller, Get, NotFoundException, Param, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { createReadStream, existsSync } from 'node:fs';
+import { createReadStream, existsSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { eventBannerDir, isSafeBannerFilename } from './upload-paths.js';
+import { StoredMedia, StoredMediaDocument } from './schemas/stored-media.schema.js';
 
 const FALLBACK_BANNER_SVG = Buffer.from(
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="1280" height="800">
@@ -29,9 +32,14 @@ const FALLBACK_BANNER_SVG = Buffer.from(
 
 @Controller('media/event-banners')
 export class AdminMediaController {
+  constructor(
+    @InjectModel(StoredMedia.name)
+    private readonly mediaModel: Model<StoredMediaDocument>,
+  ) {}
+
   /** Public read — filenames are unguessable UUIDs. */
   @Get(':filename')
-  serveBanner(@Param('filename') filename: string, @Res() res: Response) {
+  async serveBanner(@Param('filename') filename: string, @Res() res: Response) {
     const safe = basename(filename);
     if (!isSafeBannerFilename(safe)) {
       throw new NotFoundException('File not found');
@@ -42,22 +50,38 @@ export class AdminMediaController {
       join(process.cwd(), 'backend', 'uploads', 'event-banners', safe),
     ];
     const path = candidates.find((p) => existsSync(p));
-    if (!path) {
-      res.setHeader('Content-Type', 'image/svg+xml');
-      res.setHeader('Cache-Control', 'public, max-age=60');
-      res.status(200).send(FALLBACK_BANNER_SVG);
+    if (path) {
+      const lower = safe.toLowerCase();
+      const type = lower.endsWith('.png')
+        ? 'image/png'
+        : lower.endsWith('.webp')
+          ? 'image/webp'
+          : lower.endsWith('.gif')
+            ? 'image/gif'
+            : 'image/jpeg';
+      res.setHeader('Content-Type', type);
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      createReadStream(path).pipe(res);
       return;
     }
-    const lower = safe.toLowerCase();
-    const type = lower.endsWith('.png')
-      ? 'image/png'
-      : lower.endsWith('.webp')
-        ? 'image/webp'
-        : lower.endsWith('.gif')
-          ? 'image/gif'
-          : 'image/jpeg';
-    res.setHeader('Content-Type', type);
-    res.setHeader('Cache-Control', 'public, max-age=86400');
-    createReadStream(path).pipe(res);
+
+    // If missing from local disk (e.g. Render redeploy), fetch from MongoDB
+    const stored = await this.mediaModel.findOne({ filename: safe }).exec();
+    if (stored && stored.data) {
+      try {
+        writeFileSync(join(eventBannerDir(), safe), stored.data);
+      } catch {
+        // Ignore cache write error
+      }
+      res.setHeader('Content-Type', stored.contentType || 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.send(stored.data);
+      return;
+    }
+
+    // Fallback if not found in disk or database
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    res.status(200).send(FALLBACK_BANNER_SVG);
   }
 }

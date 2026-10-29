@@ -10,13 +10,15 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { existsSync, unlinkSync } from 'node:fs';
+import { existsSync, readFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
 import type { Request } from 'express';
 import { diskStorage } from 'multer';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { Roles } from '../auth/decorators/roles.decorator.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import { SessionAuthGuard } from '../auth/guards/session-auth.guard.js';
@@ -25,6 +27,7 @@ import { DeleteEventBannerDto } from './dto/delete-event-banner.dto.js';
 import { filenameFromEventBannerUrl } from './banner-url.util.js';
 import { buildUploadedMediaUrl } from './public-media-url.js';
 import { eventBannerDir } from './upload-paths.js';
+import { StoredMedia, StoredMediaDocument } from './schemas/stored-media.schema.js';
 
 const MAX_BANNER_BYTES = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_EXT = new Set([
@@ -50,6 +53,11 @@ function isAllowedImageUpload(file: {
 @UseGuards(SessionAuthGuard, RolesGuard)
 @Roles(UserRole.Admin)
 export class AdminUploadController {
+  constructor(
+    @InjectModel(StoredMedia.name)
+    private readonly mediaModel: Model<StoredMediaDocument>,
+  ) {}
+
   @Post('event-banner')
   @HttpCode(200)
   @UseInterceptors(
@@ -78,7 +86,7 @@ export class AdminUploadController {
       }),
     }),
   )
-  uploadEventBanner(
+  async uploadEventBanner(
     @UploadedFile() file: Express.Multer.File | undefined,
     @Req() req: Request,
   ) {
@@ -87,6 +95,25 @@ export class AdminUploadController {
         'No image file received. Choose a file after cropping, or sign in again as admin.',
       );
     }
+
+    if (file.path && existsSync(file.path)) {
+      try {
+        const data = readFileSync(file.path);
+        await this.mediaModel.findOneAndUpdate(
+          { filename: file.filename },
+          {
+            filename: file.filename,
+            contentType: file.mimetype || 'image/jpeg',
+            data,
+            size: file.size,
+          },
+          { upsert: true, new: true },
+        );
+      } catch {
+        // Disk write already succeeded; ignore if DB write fails
+      }
+    }
+
     const url = buildUploadedMediaUrl(
       file.filename,
       process.env.PUBLIC_API_URL?.trim(),
@@ -96,7 +123,7 @@ export class AdminUploadController {
 
   @Delete('event-banner')
   @HttpCode(200)
-  deleteEventBanner(@Body() body: DeleteEventBannerDto) {
+  async deleteEventBanner(@Body() body: DeleteEventBannerDto) {
     const url = body?.url?.trim();
     if (!url) {
       throw new BadRequestException('url is required');
@@ -109,6 +136,7 @@ export class AdminUploadController {
     if (existsSync(path)) {
       unlinkSync(path);
     }
+    await this.mediaModel.deleteOne({ filename }).exec();
     return { ok: true };
   }
 }
