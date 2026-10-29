@@ -19,6 +19,8 @@ services:
         generateValue: true
       - key: CORS_ORIGIN
         sync: false
+      - key: PUBLIC_API_URL
+        sync: false
       - key: BOOTSTRAP_ADMIN_EMAIL
         sync: false
       - key: BOOTSTRAP_ADMIN_PASSWORD
