@@ -10,6 +10,7 @@ import {
   TicketPackageDocument,
 } from '../events/schemas/ticket-package.schema.js';
 import { CheckIn, CheckInDocument } from '../gatekeeper/schemas/check-in.schema.js';
+import { User, UserDocument } from '../users/schemas/user.schema.js';
 import type { AdminAnalyticsQueryDto } from './dto/admin-analytics-query.dto.js';
 import type { AdminCheckInsQueryDto } from './dto/admin-check-ins-query.dto.js';
 
@@ -40,6 +41,8 @@ export class AdminReportsService {
     private readonly bookingModel: Model<BookingDocument>,
     @InjectModel(CheckIn.name)
     private readonly checkInModel: Model<CheckInDocument>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
   ) {}
 
   async getAnalytics(query: AdminAnalyticsQueryDto) {
@@ -119,17 +122,36 @@ export class AdminReportsService {
       .exec();
     const bookingMap = new Map(bookings.map((b) => [b._id.toString(), b]));
 
+    const gatekeeperIds = [
+      ...new Set(
+        checkIns
+          .map((row) => row.gatekeeperId)
+          .filter((id): id is Types.ObjectId => Boolean(id)),
+      ),
+    ];
+    const gatekeepers = await this.userModel
+      .find({ _id: { $in: gatekeeperIds } })
+      .select('name')
+      .exec();
+    const gatekeeperMap = new Map(
+      gatekeepers.map((u) => [u._id.toString(), u.name]),
+    );
+
     return {
       checkIns: checkIns.map((row) => {
         const ticket = ticketMap.get(row.ticketId.toString());
         const booking = ticket
           ? bookingMap.get(ticket.bookingId.toString())
           : undefined;
+        const gatekeeperName = row.gatekeeperId
+          ? (gatekeeperMap.get(row.gatekeeperId.toString()) ?? null)
+          : null;
 
         return {
           id: row._id.toString(),
           eventId: row.eventId.toString(),
           gatekeeperId: row.gatekeeperId.toString(),
+          gatekeeperName,
           gateId: row.gateId,
           result: row.result,
           timestamp: row.timestamp,
