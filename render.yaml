@@ -10,6 +10,12 @@ services:
     buildCommand: npm ci && npm run build
     startCommand: npm start
     healthCheckPath: /api/v1/health
+    # Event banners live under uploads/event-banners (ephemeral on free tier).
+    # Re-upload images in admin after deploy, or add a paid persistent disk, e.g.:
+    # disk:
+    #   name: eventpulse-uploads
+    #   mountPath: /opt/render/project/src/uploads
+    #   sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
