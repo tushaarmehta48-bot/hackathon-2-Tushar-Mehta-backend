@@ -8,10 +8,12 @@ import { AdminPackagesController } from './admin-packages.controller.js';
 import { EventsController } from './events.controller.js';
 import { EventsService } from './events.service.js';
 import { Booking, BookingSchema } from '../bookings/schemas/booking.schema.js';
+import { Ticket, TicketSchema } from '../bookings/schemas/ticket.schema.js';
 import {
   GatekeeperAssignment,
   GatekeeperAssignmentSchema,
 } from '../gatekeeper/schemas/gatekeeper-assignment.schema.js';
+import { CheckIn, CheckInSchema } from '../gatekeeper/schemas/check-in.schema.js';
 import { Event, EventSchema } from './schemas/event.schema.js';
 import {
   TicketPackage,
@@ -25,7 +27,9 @@ import { TicketPackagesService } from './ticket-packages.service.js';
       { name: Event.name, schema: EventSchema },
       { name: TicketPackage.name, schema: TicketPackageSchema },
       { name: Booking.name, schema: BookingSchema },
+      { name: Ticket.name, schema: TicketSchema },
       { name: GatekeeperAssignment.name, schema: GatekeeperAssignmentSchema },
+      { name: CheckIn.name, schema: CheckInSchema },
     ]),
     AuditModule,
     UsersModule,

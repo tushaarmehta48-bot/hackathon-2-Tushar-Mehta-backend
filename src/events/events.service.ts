@@ -19,10 +19,12 @@ import {
   normalizeCardImageInput,
 } from './event-images.util.js';
 import { Booking, BookingDocument } from '../bookings/schemas/booking.schema.js';
+import { Ticket, TicketDocument } from '../bookings/schemas/ticket.schema.js';
 import {
   GatekeeperAssignment,
   GatekeeperAssignmentDocument,
 } from '../gatekeeper/schemas/gatekeeper-assignment.schema.js';
+import { CheckIn, CheckInDocument } from '../gatekeeper/schemas/check-in.schema.js';
 import { Event, EventDocument } from './schemas/event.schema.js';
 import { TicketPackagesService } from './ticket-packages.service.js';
 
@@ -38,8 +40,12 @@ export class EventsService {
     @InjectModel(Event.name) private readonly eventModel: Model<EventDocument>,
     @InjectModel(Booking.name)
     private readonly bookingModel: Model<BookingDocument>,
+    @InjectModel(Ticket.name)
+    private readonly ticketModel: Model<TicketDocument>,
     @InjectModel(GatekeeperAssignment.name)
     private readonly assignmentModel: Model<GatekeeperAssignmentDocument>,
+    @InjectModel(CheckIn.name)
+    private readonly checkInModel: Model<CheckInDocument>,
     private readonly packagesService: TicketPackagesService,
     private readonly auditService: AuditService,
   ) {}
@@ -234,19 +240,12 @@ export class EventsService {
     const event = await this.findByIdOrFail(eventId);
     const eventObjectId = event._id;
 
-    const bookingCount = await this.bookingModel
-      .countDocuments({ eventId: eventObjectId })
-      .exec();
-    if (bookingCount > 0) {
-      throw new BadRequestException(
-        'Cannot delete an event that has bookings. Cancel bookings first or keep the event archived.',
-      );
-    }
-
+    // Cascade delete all bookings, tickets, check-ins, assignments, and packages for this event
+    await this.ticketModel.deleteMany({ eventId: eventObjectId }).exec();
+    await this.bookingModel.deleteMany({ eventId: eventObjectId }).exec();
+    await this.checkInModel.deleteMany({ eventId: eventObjectId }).exec();
+    await this.assignmentModel.deleteMany({ eventId: eventObjectId }).exec();
     await this.packagesService.deleteAllForEvent(eventObjectId);
-    await this.assignmentModel
-      .deleteMany({ eventId: eventObjectId })
-      .exec();
 
     await event.deleteOne();
 
