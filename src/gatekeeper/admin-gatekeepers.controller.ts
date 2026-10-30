@@ -2,6 +2,7 @@ import {
   Body,
   ConflictException,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
@@ -43,6 +44,14 @@ export class AdminGatekeepersController {
   async listAssignments() {
     const assignments = await this.assignmentsService.listAllForAdmin();
     return { assignments };
+  }
+
+  @Delete('assignments/:assignmentId')
+  async deleteAssignment(
+    @Param('assignmentId') assignmentId: string,
+    @CurrentUser() admin: SafeUser,
+  ) {
+    return this.assignmentsService.deleteAssignment(assignmentId, admin.id);
   }
 
   @Post()

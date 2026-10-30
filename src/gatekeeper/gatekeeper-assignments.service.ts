@@ -71,6 +71,32 @@ export class GatekeeperAssignmentsService {
     return assignment;
   }
 
+  async deleteAssignment(assignmentId: string, actorId: string) {
+    if (!Types.ObjectId.isValid(assignmentId)) {
+      throw new NotFoundException('Assignment not found');
+    }
+
+    const assignment = await this.assignmentModel.findById(assignmentId).exec();
+    if (!assignment) {
+      throw new NotFoundException('Assignment not found');
+    }
+
+    await this.assignmentModel.deleteOne({ _id: assignment._id }).exec();
+
+    await this.auditService.log({
+      actorId,
+      action: 'gatekeeper.unassign',
+      targetType: 'gatekeeperAssignment',
+      targetId: assignment._id.toString(),
+      metadata: {
+        gatekeeperId: assignment.gatekeeperId.toString(),
+        eventId: assignment.eventId.toString(),
+      },
+    });
+
+    return { ok: true };
+  }
+
   async listAllForAdmin() {
     const rows = await this.assignmentModel
       .find({ status: AssignmentStatus.Active })
